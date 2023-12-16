@@ -1,5 +1,5 @@
 ---
-title: 'EDS 223: assignment 3'
+title: 'Texas Power'
 author: "Liane Chen"
 date: "2022-10-26"
 output:
@@ -17,17 +17,17 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Overview
 “In February 2021, the state of Texas suffered a major power crisis, which came about as a result of three severe winter storms sweeping across the United States on February 10–11, 13–17, and 15–20.”[^wiki] For more background, check out these [engineering](https://www.youtube.com/watch?v=08mwXICY4JM&ab_channel=PracticalEngineering) and [political](https://www.youtube.com/watch?v=Zcrsgdl_hP0&ab_channel=Vox) perspectives. 
 
-For this assignment, you are tasked with:  
+For this analysis, we will:  
 -   estimating the number of homes in Houston that lost power as a result of the first two storms  
 -   investigating if socioeconomic factors are predictors of communities recovery from a power outage  
 
-Your analysis will be based on remotely-sensed night lights data, acquired from the [Visible Infrared Imaging Radiometer Suite (VIIRS)](https://en.wikipedia.org/wiki/Visible_Infrared_Imaging_Radiometer_Suite) onboard the Suomi satellite. In particular, you will use the VNP46A1 to detect differences in night lights before and after the storm to identify areas that lost electric power.
+Our analysis will be based on remotely-sensed night lights data, acquired from the [Visible Infrared Imaging Radiometer Suite (VIIRS)](https://en.wikipedia.org/wiki/Visible_Infrared_Imaging_Radiometer_Suite) onboard the Suomi satellite. In particular, you will use the VNP46A1 to detect differences in night lights before and after the storm to identify areas that lost electric power.
 
-To determine the number of homes that lost power, you link (spatially join) these areas with [OpenStreetMap](https://www.openstreetmap.org/#map=4/38.01/-95.84) data on buildings and roads. 
+To determine the number of homes that lost power, we link (spatially join) these areas with [OpenStreetMap](https://www.openstreetmap.org/#map=4/38.01/-95.84) data on buildings and roads. 
 
-To investigate potential socioeconomic factors that influenced recovery, you will link your analysis with data from the US Census Bureau. 
+To investigate potential socioeconomic factors that influenced recovery, we will link your analysis with data from the US Census Bureau. 
 
-##### Learning objectives:
+##### Highlights:
 -   load vector/raster data  
 -   simple raster operations  
 -   simple vector operations  
@@ -39,12 +39,6 @@ Use NASA's Worldview to explore the data around the day of the storm. There are 
 
 VIIRS data is distributed through NASA's [Level-1 and Atmospheric Archive & Distribution System Distributed Active Archive Center (LAADS DAAC)](https://ladsweb.modaps.eosdis.nasa.gov/). Many NASA Earth data products are distributed in 10x10 degree tiles in sinusoidal equal-area projection. Tiles are identified by their horizontal and vertical position in the grid. Houston lies on the border of tiles h08v05 and h08v06. We therefore need to download two tiles per date.
 
-As you're learning in EDS 220, accessing, downloading, and preparing remote sensing data is a skill in it's own right! To prevent this assignment from being a large data wrangling challenge, we have downloaded and prepped the following files for you to work with, stored in the `VNP46A1` folder.\
-
--   `VNP46A1.A2021038.h08v05.001.2021039064328.h5.tif`: tile h08v05, collected on 2021-02-07  
--   `VNP46A1.A2021038.h08v06.001.2021039064329.h5.tif`: tile h08v06, collected on 2021-02-07  
--   `VNP46A1.A2021047.h08v05.001.2021048091106.h5.tif`: tile h08v05, collected on 2021-02-16  
--   `VNP46A1.A2021047.h08v06.001.2021048091105.h5.tif`: tile h08v06, collected on 2021-02-16  
 
 #### Roads
 Typically highways account for a large portion of the night lights observable from space (see Google's [Earth at Night](https://earth.google.com/web/@27.44405464,-84.7693044,206.63660162a,8916361.52264659d,35y,0h,0t,0r/data=CiQSIhIgMGY3ZTJkYzdlOGExMTFlNjk5MGQ2ZjgxOGQ2OWE2ZTc)). To minimize falsely identifying areas with reduced traffic as areas without power, we will ignore areas near highways.
@@ -63,18 +57,18 @@ We can also obtain building data from OpenStreetMap. We again downloaded from Ge
 #### Socioeconomic
 We cannot readily get socioeconomic information for every home, so instead we obtained data from the [U.S. Census Bureau's American Community Survey](https://www.census.gov/programs-surveys/acs) for census tracts in 2019. The *folder* `ACS_2019_5YR_TRACT_48.gdb` is an ArcGIS ["file geodatabase"](https://desktop.arcgis.com/en/arcmap/latest/manage-data/administer-file-gdbs/file-geodatabases.htm), a multi-file proprietary format that's roughly analogous to a GeoPackage file.\
 
-You can use `st_layers()` to explore the contents of the geodatabase. Each layer contains a subset of the fields documents in the [ACS metadata](https://www2.census.gov/geo/docs/maps-data/data/tiger/prejoined/ACSMetadata2011.txt).\
+We can use `st_layers()` to explore the contents of the geodatabase. Each layer contains a subset of the fields documents in the [ACS metadata](https://www2.census.gov/geo/docs/maps-data/data/tiger/prejoined/ACSMetadata2011.txt).\
 
 The geodatabase contains a layer holding the geometry information, separate from the layers holding the ACS attributes. You have to combine the geometry with the attributes to get a feature layer that `sf` can use. 
 
-## Assignment
+## Overview
 
-Below is an outline of the steps you should consider taking to achieve the assignment tasks. 
+Below is an outline of the steps we will take to achieve the assignment tasks. 
 
 #### Find locations of blackouts
-For improved computational efficiency and easier interoperability with `sf`, I recommend using the `stars` package for raster handling.\
+For improved computational efficiency and easier interoperability with `sf`, we will use the `stars` package for raster handling.\
 
-```{r}
+```{r,  warning = F, message = F,  results='hide'}
 # load all packages needed
 library(terra)
 library(dplyr)
@@ -89,7 +83,7 @@ library(styler)
 ```
 
 
-##### combine the data (5 points)
+##### combine the data 
 -   read in night lights tiles\
 -    combine tiles into a single `stars` object for each date (2021-02-07 and 2021-02-16)\
     -   hint: use `st_mosaic`\
@@ -108,7 +102,7 @@ stars1 <- st_mosaic(night1, night2)
 stars2 <- st_mosaic(night3, night4)
 ```
     
-##### create a blackout mask (10 points)
+##### create a blackout mask 
 -   find the change in night lights intensity (presumably) caused by the storm\
 -   reclassify the difference raster, assuming that any location that experienced a drop of more than 200 nW cm^-2^sr^-1^ experienced a blackout\
 -   assign `NA` to all locations that experienced a drop of *less* than 200 nW cm^-2^sr^-1^\
@@ -130,7 +124,7 @@ plot(night_change1)
 
 
 
-##### vectorize the mask (5 points)
+##### vectorize the mask 
 -   use `st_as_sf()` to vectorize the blackout mask\
 -   fix any invalid geometries using `st_make_valid`
 
@@ -141,7 +135,7 @@ vect_night_change <- st_as_sf(night_change1) %>% # use the difference raster cre
 ```
 
 
-##### crop the vectorized map to our region of interest (10 points)
+##### crop the vectorized map to our region of interest 
 -   define the Houston metropolitan area with the following coordinates\
     -   (-96.5, 29), (-96.5, 30.5), (-94.5, 30.5), (-94.5, 29)\
 -   turn these coordinates into a polygon using `st_polygon`\
@@ -165,7 +159,7 @@ houston_crop <- st_crop(vect_night_change, houston_p) %>% # use houston crop abo
 ```
 
 
-##### exclude highways from blackout mask (10 points)
+##### exclude highways from blackout mask 
 The roads geopackage includes data on roads other than highways. However, we can avoid reading in data we don't need by taking advantage of `st_read`'s ability to subset using a SQL query.\
 
 -   define SQL query\
@@ -208,7 +202,7 @@ plot(blackout_over_200)
 
 #### Find homes impacted by blackouts
 
-##### load buildings data (10 points)
+##### load buildings data 
 -   load buildings dataset using `st_read` and the following SQL query to select only residential buildings\
   -   hint: reproject data to EPSG:3083\
 
@@ -241,7 +235,7 @@ nrow(blackout_homes)
 
 #### Investigate socioeconomic factors
 
-##### load ACS data (10 points)
+##### load ACS data 
 -   use `st_read()` to load the geodatabase layers\
 -   geometries are stored in the `ACS_2019_5YR_TRACT_48_TEXAS` layer\
 -   income data is stored in the `X19_INCOME` layer\
@@ -260,7 +254,7 @@ income <- st_read(dsn = "data/ACS_2019_5YR_TRACT_48_TEXAS.gdb", layer = "X19_INC
 ```
 
 
-##### determine which census tracts experienced blackouts (10 points)
+##### determine which census tracts experienced blackouts 
 -   join the income data to the census tract geometries\
   -   hint: make sure to join by geometry ID\
 -   spatially join census tract data with buildings determined to be impacted by blackouts\
@@ -290,7 +284,7 @@ length(unique_joined) # there are 3688 tracts. Exact tracts can be accessed by p
 
 ```
 
-##### compare incomes of impacted tracts to unimpacted tracts (10 points)
+##### compare incomes of impacted tracts to unimpacted tracts 
 -   create a map of median income by census tract, designating which tracts had blackouts\
 -   plot the distribution of income in impacted and unimpacted tracts
 -   write approx. 100 words summarizing your results and discussing any limitations to this study
@@ -351,10 +345,8 @@ impacted1 <- ggplot(impacted) + # call in impacted created above
 impacted1 + unimpacted1 # use two variables defined above
 ```
 
-```
-Write approx. 100 words summarizing your results and discussing any limitations to this study
+
 
 The plot and histograms show that for affected census tracts, there seems to be more storm impact to those with less income around the $50,000 in annual income mark, with less impact in the higher income range over $200,000 in annual income. This implies that areas in census tracts with higher income levels may be better prepared for intense weather events and less prone to power outages. Their local utility grid may be more elevated or updated and resilient to major storm events. It could be possible that these populations may have more interaction with their utility provider, so that any complaints or needed repairs to electrical equipment are addressed sooner. 
 
 
-```
